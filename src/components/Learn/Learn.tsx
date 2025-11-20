@@ -9,6 +9,10 @@ export const Learn: React.FC = () => {
   const [knowledgeTitle, setKnowledgeTitle] = useState('');
   const [knowledgeContent, setKnowledgeContent] = useState('');
   const [browseUrl, setBrowseUrl] = useState('');
+  const [isBrowsing, setIsBrowsing] = useState(false);
+  const [browseError, setBrowseError] = useState('');
+  const [browseSuccess, setBrowseSuccess] = useState('');
+  const [uploadSuccess, setUploadSuccess] = useState('');
 
   const isSleeping = currentMood === 'sleeping';
 
@@ -18,6 +22,7 @@ export const Learn: React.FC = () => {
         title: knowledgeTitle.trim(),
         content: knowledgeContent.trim(),
         source: 'manual',
+        category: 'Manual Entry',
       });
       setKnowledgeTitle('');
       setKnowledgeContent('');
@@ -37,10 +42,18 @@ export const Learn: React.FC = () => {
           title: file.name,
           content: content.substring(0, 5000), // Limit to 5000 chars
           source: 'file',
+          category: 'File Upload',
         });
+
+        setUploadSuccess(`Successfully learned from ${file.name}!`);
+        setTimeout(() => setUploadSuccess(''), 3000);
 
         // Reset
         event.target.value = '';
+      };
+      reader.onerror = () => {
+        setUploadSuccess('Error reading file. Please try again.');
+        setTimeout(() => setUploadSuccess(''), 3000);
       };
       reader.readAsText(file);
     }
@@ -48,15 +61,40 @@ export const Learn: React.FC = () => {
 
   const handleBrowseSubmit = async () => {
     if (browseUrl.trim()) {
-      await browseAndLearn(browseUrl.trim());
-      setBrowseUrl('');
-      setShowBrowseForm(false);
+      setIsBrowsing(true);
+      setBrowseError('');
+      setBrowseSuccess('');
+
+      try {
+        await browseAndLearn(browseUrl.trim());
+        setBrowseSuccess('Successfully learned from webpage!');
+        setBrowseUrl('');
+        setTimeout(() => {
+          setBrowseSuccess('');
+          setShowBrowseForm(false);
+        }, 2000);
+      } catch (error) {
+        setBrowseError('Failed to fetch webpage. Please check the URL and try again.');
+      } finally {
+        setIsBrowsing(false);
+      }
     }
   };
 
   return (
     <div className="w-full max-w-md p-4 bg-white rounded-lg shadow space-y-4">
       <h2 className="text-xl font-bold mb-4">Learning & Knowledge</h2>
+
+      {/* Success Messages */}
+      {uploadSuccess && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-2 bg-green-100 text-green-800 rounded text-sm"
+        >
+          ✓ {uploadSuccess}
+        </motion.div>
+      )}
 
       <div className="space-y-3">
         {/* Upload File Button */}
@@ -101,25 +139,36 @@ export const Learn: React.FC = () => {
 
         {showKnowledgeForm && (
           <div className="p-3 bg-indigo-50 rounded-lg space-y-2">
-            <input
-              type="text"
-              placeholder="Knowledge title..."
-              value={knowledgeTitle}
-              onChange={(e) => setKnowledgeTitle(e.target.value)}
-              className="w-full px-3 py-2 border rounded text-sm"
-              maxLength={100}
-            />
-            <textarea
-              placeholder="What would you like to teach your Tamagotchi?"
-              value={knowledgeContent}
-              onChange={(e) => setKnowledgeContent(e.target.value)}
-              className="w-full px-3 py-2 border rounded text-sm"
-              rows={4}
-              maxLength={2000}
-            />
+            <div>
+              <input
+                type="text"
+                placeholder="Knowledge title..."
+                value={knowledgeTitle}
+                onChange={(e) => setKnowledgeTitle(e.target.value)}
+                className="w-full px-3 py-2 border rounded text-sm"
+                maxLength={100}
+              />
+              <div className="text-xs text-gray-500 mt-1 text-right">
+                {knowledgeTitle.length}/100
+              </div>
+            </div>
+            <div>
+              <textarea
+                placeholder="What would you like to teach your Tamagotchi?"
+                value={knowledgeContent}
+                onChange={(e) => setKnowledgeContent(e.target.value)}
+                className="w-full px-3 py-2 border rounded text-sm"
+                rows={4}
+                maxLength={2000}
+              />
+              <div className="text-xs text-gray-500 mt-1 text-right">
+                {knowledgeContent.length}/2000
+              </div>
+            </div>
             <button
               onClick={handleKnowledgeSubmit}
-              className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
+              disabled={!knowledgeTitle.trim() || !knowledgeContent.trim()}
+              className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Feed Knowledge
             </button>
@@ -149,19 +198,41 @@ export const Learn: React.FC = () => {
           <div className="p-3 bg-blue-50 rounded-lg space-y-2">
             <input
               type="url"
-              placeholder="Enter URL to learn from..."
+              placeholder="Enter URL to learn from... (e.g., https://example.com)"
               value={browseUrl}
               onChange={(e) => setBrowseUrl(e.target.value)}
               className="w-full px-3 py-2 border rounded text-sm"
+              disabled={isBrowsing}
             />
+
+            {browseError && (
+              <div className="p-2 bg-red-100 text-red-800 rounded text-xs">
+                ⚠ {browseError}
+              </div>
+            )}
+
+            {browseSuccess && (
+              <div className="p-2 bg-green-100 text-green-800 rounded text-xs">
+                ✓ {browseSuccess}
+              </div>
+            )}
+
             <button
               onClick={handleBrowseSubmit}
-              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+              disabled={!browseUrl.trim() || isBrowsing}
+              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Start Learning
+              {isBrowsing ? (
+                <>
+                  <span className="inline-block animate-spin">⏳</span>
+                  Fetching webpage...
+                </>
+              ) : (
+                'Start Learning'
+              )}
             </button>
             <p className="text-xs text-blue-700">
-              Note: Web browsing is currently simulated. Your Tamagotchi will record the URL.
+              Your Tamagotchi will read and learn from the webpage content.
             </p>
           </div>
         )}

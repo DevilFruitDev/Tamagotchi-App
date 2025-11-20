@@ -81,6 +81,29 @@ export interface Environment {
   knowledgeLevel: number;      // 0-100, accumulated learning
 }
 
+export type CurrentLocation = 'bedroom' | 'study' | 'living-room' | 'play-area' | 'outside';
+
+export interface Visitor {
+  id: string;
+  name: string;
+  evolutionStage: EvolutionStage;
+  evolutionBranch: EvolutionBranch;
+  personality: PersonalityTraits;
+  message: string;
+  gifts?: KnowledgeItem[];
+  visitTimestamp: Date;
+}
+
+export interface VisitorCard {
+  name: string;
+  evolutionStage: EvolutionStage;
+  evolutionBranch: EvolutionBranch;
+  personality: PersonalityTraits;
+  message: string;
+  knowledgeGifts?: Omit<KnowledgeItem, 'id' | 'timestamp'>[];
+  exportDate: Date;
+}
+
 export interface AIConfig {
   provider: AIProvider;
   claudeApiKey?: string;
@@ -91,6 +114,7 @@ export interface TamagotchiState {
   name: string;
   birthDate: Date;
   currentMood: PetMood;
+  currentLocation: CurrentLocation;
   evolutionStage: EvolutionStage;
   evolutionBranch: EvolutionBranch;
   abilities: EvolutionAbility[];
@@ -99,6 +123,7 @@ export interface TamagotchiState {
   careQuality: CareQuality;
   environment: Environment;
   knowledgeBase: KnowledgeItem[];
+  visitors: Visitor[];
   activityLogs: ActivityLog[];
   conversations: Conversation[];
   isAlive: boolean;
@@ -122,4 +147,7 @@ export interface TamagotchiActions {
   sendMessage: (message: string) => Promise<string>;
   exportConversations: () => void;
   exportKnowledge: () => void;
+  exportVisitorCard: (message: string, includeKnowledge: boolean) => void;
+  importVisitorCard: (cardData: string) => void;
+  updateLocation: (location: CurrentLocation) => void;
 }
