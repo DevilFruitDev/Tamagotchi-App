@@ -10,6 +10,7 @@ import { Learn } from './components/Learn/Learn';
 import { Environment } from './components/Environment/Environment';
 import { House } from './components/House/House';
 import { Social } from './components/Social/Social';
+import { Reminders } from './components/Reminders/Reminders';
 
 function App() {
   const {
@@ -121,6 +122,7 @@ function App() {
           <div className="space-y-6">
             <Environment />
             <Social />
+            <Reminders />
             <Settings />
             <ActivityLogs />
           </div>

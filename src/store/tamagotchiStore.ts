@@ -13,7 +13,8 @@ import {
   EvolutionAbility,
   StatModifiers,
   KnowledgeItem,
-  Visitor
+  Visitor,
+  Reminder
 } from '../types/tamagotchi';
 
 const DECAY_RATE = {
@@ -303,10 +304,13 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
       },
       knowledgeBase: [],
       visitors: [],
+      reminders: [],
       activityLogs: [],
       conversations: [],
       isAlive: true,
       lastUpdated: new Date(),
+      lastInteractionTime: new Date(),
+      notificationsEnabled: false,
       aiConfig: {
         provider: 'none',
       },
@@ -470,6 +474,35 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
             });
           }
         }, 8000);
+      },
+
+      wakeUpPet: () => {
+        const state = get();
+        if (!state.isAlive || state.currentMood !== 'sleeping') return;
+
+        const statsBefore = { ...state.stats };
+        const statsAfter = {
+          ...state.stats,
+          energy: clamp(state.stats.energy + 30, 0, 100), // Partial energy restore
+          happiness: clamp(state.stats.happiness - 5, 0, 100), // Slightly grumpy when woken up early
+        };
+
+        const newCareQuality = { ...state.careQuality };
+        newCareQuality.interactionCount += 1;
+
+        const newEvolutionStage = getEvolutionStage(state.birthDate, newCareQuality);
+
+        set({
+          stats: statsAfter,
+          currentMood: getMood(statsAfter),
+          careQuality: newCareQuality,
+          evolutionStage: newEvolutionStage,
+          lastInteractionTime: new Date(),
+          activityLogs: [
+            createActivityLog('wake', statsBefore, statsAfter),
+            ...state.activityLogs,
+          ],
+        });
       },
 
       giveMedicine: () => {
@@ -1001,6 +1034,151 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
 
       updateLocation: (location) => {
         set({ currentLocation: location });
+      },
+
+      addReminder: (reminder) => {
+        const state = get();
+
+        const newReminder: Reminder = {
+          ...reminder,
+          id: crypto.randomUUID(),
+          createdAt: new Date(),
+          completed: false,
+          dismissed: false,
+        };
+
+        set({
+          reminders: [...state.reminders, newReminder],
+        });
+      },
+
+      completeReminder: (id) => {
+        const state = get();
+        set({
+          reminders: state.reminders.map(r =>
+            r.id === id ? { ...r, completed: true } : r
+          ),
+        });
+      },
+
+      dismissReminder: (id) => {
+        const state = get();
+        set({
+          reminders: state.reminders.map(r =>
+            r.id === id ? { ...r, dismissed: true } : r
+          ),
+        });
+      },
+
+      checkReminders: () => {
+        const state = get();
+        const now = new Date();
+
+        // Check for due reminders
+        state.reminders.forEach(reminder => {
+          if (
+            !reminder.completed &&
+            !reminder.dismissed &&
+            new Date(reminder.scheduledFor) <= now
+          ) {
+            // Show browser notification if enabled
+            if (state.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
+              new Notification(`${state.name} - ${reminder.title}`, {
+                body: reminder.message,
+                icon: '/tamagotchi-app/favicon.ico',
+                tag: reminder.id,
+              });
+            }
+
+            // If recurring, create next reminder
+            if (reminder.recurring && reminder.recurringInterval) {
+              const nextScheduledFor = new Date(reminder.scheduledFor);
+              nextScheduledFor.setMinutes(nextScheduledFor.getMinutes() + reminder.recurringInterval);
+
+              get().addReminder({
+                type: reminder.type,
+                title: reminder.title,
+                message: reminder.message,
+                scheduledFor: nextScheduledFor,
+                recurring: true,
+                recurringInterval: reminder.recurringInterval,
+              });
+            }
+          }
+        });
+
+        // Check if pet misses you (no interaction for 30 minutes)
+        const timeSinceLastInteraction = now.getTime() - new Date(state.lastInteractionTime).getTime();
+        const minutesSinceInteraction = timeSinceLastInteraction / (1000 * 60);
+
+        if (
+          minutesSinceInteraction >= 30 &&
+          state.isAlive &&
+          state.notificationsEnabled &&
+          'Notification' in window &&
+          Notification.permission === 'granted'
+        ) {
+          // Check if we already sent a miss-you reminder recently
+          const recentMissYou = state.reminders.find(r =>
+            r.type === 'miss-you' &&
+            !r.dismissed &&
+            (now.getTime() - new Date(r.createdAt).getTime()) < 1800000 // 30 minutes
+          );
+
+          if (!recentMissYou) {
+            new Notification(`${state.name} misses you! 💙`, {
+              body: `It's been ${Math.floor(minutesSinceInteraction)} minutes since you last interacted. Come say hello!`,
+              icon: '/tamagotchi-app/favicon.ico',
+              tag: 'miss-you',
+            });
+
+            // Add miss-you reminder to history
+            get().addReminder({
+              type: 'miss-you',
+              title: 'I miss you!',
+              message: `${state.name} was feeling lonely`,
+              scheduledFor: now,
+            });
+          }
+        }
+
+        // Auto-dismiss old completed/dismissed reminders (older than 7 days)
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        set({
+          reminders: state.reminders.filter(r => {
+            if (r.completed || r.dismissed) {
+              return new Date(r.createdAt) > sevenDaysAgo;
+            }
+            return true;
+          }),
+        });
+      },
+
+      requestNotificationPermission: async () => {
+        if (!('Notification' in window)) {
+          console.log('This browser does not support notifications');
+          return false;
+        }
+
+        if (Notification.permission === 'granted') {
+          set({ notificationsEnabled: true });
+          return true;
+        }
+
+        if (Notification.permission !== 'denied') {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            set({ notificationsEnabled: true });
+            return true;
+          }
+        }
+
+        return false;
+      },
+
+      toggleNotifications: () => {
+        const state = get();
+        set({ notificationsEnabled: !state.notificationsEnabled });
       },
     }),
     {

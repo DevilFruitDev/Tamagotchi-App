@@ -49,10 +49,25 @@ export interface CareQuality {
 
 export interface ActivityLog {
   id: string;
-  action: 'feed' | 'play' | 'clean' | 'sleep' | 'medicine' | 'train' | 'talk';
+  action: 'feed' | 'play' | 'clean' | 'sleep' | 'medicine' | 'train' | 'talk' | 'wake';
   timestamp: Date;
   statsBefore: PetStats;
   statsAfter: PetStats;
+}
+
+export type ReminderType = 'task' | 'miss-you' | 'care' | 'custom';
+
+export interface Reminder {
+  id: string;
+  type: ReminderType;
+  title: string;
+  message: string;
+  scheduledFor: Date;
+  createdAt: Date;
+  completed: boolean;
+  dismissed: boolean;
+  recurring?: boolean;
+  recurringInterval?: number; // in minutes
 }
 
 export interface Conversation {
@@ -124,10 +139,13 @@ export interface TamagotchiState {
   environment: Environment;
   knowledgeBase: KnowledgeItem[];
   visitors: Visitor[];
+  reminders: Reminder[];
   activityLogs: ActivityLog[];
   conversations: Conversation[];
   isAlive: boolean;
   lastUpdated: Date;
+  lastInteractionTime: Date;
+  notificationsEnabled: boolean;
   aiConfig: AIConfig;
 }
 
@@ -136,6 +154,7 @@ export interface TamagotchiActions {
   playWithPet: () => void;
   cleanPet: () => void;
   putPetToSleep: () => void;
+  wakeUpPet: () => void;
   giveMedicine: () => void;
   trainPet: () => void;
   feedKnowledge: (knowledge: Omit<KnowledgeItem, 'id' | 'timestamp'>) => void;
@@ -150,4 +169,10 @@ export interface TamagotchiActions {
   exportVisitorCard: (message: string, includeKnowledge: boolean) => void;
   importVisitorCard: (cardData: string) => void;
   updateLocation: (location: CurrentLocation) => void;
+  addReminder: (reminder: Omit<Reminder, 'id' | 'createdAt' | 'completed' | 'dismissed'>) => void;
+  completeReminder: (id: string) => void;
+  dismissReminder: (id: string) => void;
+  checkReminders: () => void;
+  requestNotificationPermission: () => Promise<boolean>;
+  toggleNotifications: () => void;
 }
