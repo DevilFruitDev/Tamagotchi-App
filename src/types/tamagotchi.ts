@@ -77,6 +77,19 @@ export interface Conversation {
   aiResponse: string;
   evolutionStage: EvolutionStage;
   mood: PetMood;
+  aiRecommendation?: AISuggestion;
+}
+
+export type SuggestionType = 'action' | 'environment' | 'learning' | 'care' | 'general';
+
+export interface AISuggestion {
+  id: string;
+  type: SuggestionType;
+  title: string;
+  message: string;
+  action?: 'clean' | 'feed' | 'play' | 'sleep' | 'train' | 'clean-environment' | 'none';
+  timestamp: Date;
+  acknowledged: boolean;
 }
 
 export interface KnowledgeItem {
@@ -140,6 +153,7 @@ export interface TamagotchiState {
   knowledgeBase: KnowledgeItem[];
   visitors: Visitor[];
   reminders: Reminder[];
+  aiSuggestions: AISuggestion[];
   activityLogs: ActivityLog[];
   conversations: Conversation[];
   isAlive: boolean;
@@ -175,4 +189,6 @@ export interface TamagotchiActions {
   checkReminders: () => void;
   requestNotificationPermission: () => Promise<boolean>;
   toggleNotifications: () => void;
+  acknowledgeSuggestion: (id: string) => void;
+  executeSuggestion: (suggestion: AISuggestion) => void;
 }

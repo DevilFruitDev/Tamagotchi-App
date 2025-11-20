@@ -11,6 +11,7 @@ import { Environment } from './components/Environment/Environment';
 import { House } from './components/House/House';
 import { Social } from './components/Social/Social';
 import { Reminders } from './components/Reminders/Reminders';
+import { Chat } from './components/Chat/Chat';
 
 function App() {
   const {
@@ -118,6 +119,7 @@ function App() {
           <div className="space-y-6">
             <Stats />
             <Personality />
+            <Chat />
           </div>
           <div className="space-y-6">
             <Environment />

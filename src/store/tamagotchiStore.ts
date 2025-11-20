@@ -14,7 +14,8 @@ import {
   StatModifiers,
   KnowledgeItem,
   Visitor,
-  Reminder
+  Reminder,
+  AISuggestion
 } from '../types/tamagotchi';
 
 const DECAY_RATE = {
@@ -305,6 +306,7 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
       knowledgeBase: [],
       visitors: [],
       reminders: [],
+      aiSuggestions: [],
       activityLogs: [],
       conversations: [],
       isAlive: true,
@@ -704,20 +706,44 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
             evolutionBranch: state.evolutionBranch,
             abilities: state.abilities,
             knowledgeBase: state.knowledgeBase.slice(0, 10), // Pass top 10 knowledge items
+            environment: state.environment,
+            currentLocation: state.currentLocation,
             conversationHistory: state.conversations.slice(-5), // Last 5 conversations for context
             provider: state.aiConfig.provider,
             claudeApiKey: state.aiConfig.claudeApiKey,
             openaiApiKey: state.aiConfig.openaiApiKey,
           });
 
+          // Parse AI suggestions from response
+          const suggestionMatch = response.match(/\[SUGGEST:([^:]+):([^:]+):([^:]+):([^\]]+)\]/);
+          let cleanResponse = response;
+          let aiSuggestion: AISuggestion | undefined;
+
+          if (suggestionMatch) {
+            // Extract suggestion data
+            const [fullMatch, type, title, suggestionMessage, action] = suggestionMatch;
+            cleanResponse = response.replace(fullMatch, '').trim();
+
+            aiSuggestion = {
+              id: crypto.randomUUID(),
+              type: type as any,
+              title: title.trim(),
+              message: suggestionMessage.trim(),
+              action: action.trim() as any,
+              timestamp: new Date(),
+              acknowledged: false,
+            };
+          }
+
           // Save conversation
           const conversation = {
             id: crypto.randomUUID(),
             timestamp: new Date(),
             userMessage: message,
-            aiResponse: response,
+            aiResponse: cleanResponse,
             evolutionStage: state.evolutionStage,
             mood: state.currentMood,
+            aiRecommendation: aiSuggestion,
           };
 
           // Increase friendliness from conversation
@@ -726,12 +752,19 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
             friendliness: clamp(state.personality.friendliness + 0.3, 0, 100),
           };
 
+          // Add suggestion to suggestions list if exists
+          const updatedSuggestions = aiSuggestion
+            ? [aiSuggestion, ...state.aiSuggestions]
+            : state.aiSuggestions;
+
           set({
             conversations: [conversation, ...state.conversations],
+            aiSuggestions: updatedSuggestions,
             personality: newPersonality,
+            lastInteractionTime: new Date(),
           });
 
-          return response;
+          return cleanResponse;
         } catch (error) {
           console.error('AI Error:', error);
           return 'Sorry, I had trouble understanding that. Please try again!';
@@ -1179,6 +1212,44 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
       toggleNotifications: () => {
         const state = get();
         set({ notificationsEnabled: !state.notificationsEnabled });
+      },
+
+      acknowledgeSuggestion: (id) => {
+        const state = get();
+        set({
+          aiSuggestions: state.aiSuggestions.map(s =>
+            s.id === id ? { ...s, acknowledged: true } : s
+          ),
+        });
+      },
+
+      executeSuggestion: (suggestion) => {
+        // Execute the suggested action
+        switch (suggestion.action) {
+          case 'feed':
+            get().feedPet();
+            break;
+          case 'play':
+            get().playWithPet();
+            break;
+          case 'clean':
+            get().cleanPet();
+            break;
+          case 'sleep':
+            get().putPetToSleep();
+            break;
+          case 'train':
+            get().trainPet();
+            break;
+          case 'clean-environment':
+            get().cleanEnvironment();
+            break;
+          default:
+            break;
+        }
+
+        // Mark as acknowledged
+        get().acknowledgeSuggestion(suggestion.id);
       },
     }),
     {
