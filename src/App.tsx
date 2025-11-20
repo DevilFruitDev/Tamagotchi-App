@@ -8,6 +8,8 @@ import { Personality } from './components/Personality/Personality';
 import { Settings } from './components/Settings/Settings';
 import { Learn } from './components/Learn/Learn';
 import { Environment } from './components/Environment/Environment';
+import { House } from './components/House/House';
+import { Social } from './components/Social/Social';
 
 function App() {
   const {
@@ -110,6 +112,7 @@ function App() {
             <Pet />
             <Actions />
             <Learn />
+            <House />
           </div>
           <div className="space-y-6">
             <Stats />
@@ -117,6 +120,7 @@ function App() {
           </div>
           <div className="space-y-6">
             <Environment />
+            <Social />
             <Settings />
             <ActivityLogs />
           </div>

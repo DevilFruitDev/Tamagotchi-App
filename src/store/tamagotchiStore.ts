@@ -12,7 +12,8 @@ import {
   EvolutionBranch,
   EvolutionAbility,
   StatModifiers,
-  KnowledgeItem
+  KnowledgeItem,
+  Visitor
 } from '../types/tamagotchi';
 
 const DECAY_RATE = {
@@ -271,6 +272,7 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
       name: '',
       birthDate: new Date(),
       currentMood: 'happy',
+      currentLocation: 'living-room',
       evolutionStage: 'baby',
       evolutionBranch: 'none',
       abilities: [],
@@ -300,6 +302,7 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
         knowledgeLevel: 0,
       },
       knowledgeBase: [],
+      visitors: [],
       activityLogs: [],
       conversations: [],
       isAlive: true,
@@ -903,6 +906,101 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
+      },
+
+      exportVisitorCard: (message: string, includeKnowledge: boolean) => {
+        const state = get();
+
+        const knowledgeGifts = includeKnowledge
+          ? state.knowledgeBase.slice(0, 3).map(item => ({
+              title: item.title,
+              content: item.content,
+              source: item.source as 'file' | 'url' | 'conversation' | 'manual',
+              category: item.category,
+              tags: item.tags,
+            }))
+          : undefined;
+
+        const visitorCard = {
+          name: state.name,
+          evolutionStage: state.evolutionStage,
+          evolutionBranch: state.evolutionBranch,
+          personality: state.personality,
+          message,
+          knowledgeGifts,
+          exportDate: new Date(),
+        };
+
+        const dataStr = JSON.stringify(visitorCard, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${state.name}-visitor-card.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      },
+
+      importVisitorCard: (cardData: string) => {
+        const state = get();
+        if (!state.isAlive) return;
+
+        try {
+          const visitorCard = JSON.parse(cardData);
+
+          // Create visitor entry
+          const visitor: Visitor = {
+            id: crypto.randomUUID(),
+            name: visitorCard.name,
+            evolutionStage: visitorCard.evolutionStage,
+            evolutionBranch: visitorCard.evolutionBranch,
+            personality: visitorCard.personality,
+            message: visitorCard.message,
+            gifts: visitorCard.knowledgeGifts?.map((gift: Omit<KnowledgeItem, 'id' | 'timestamp'>) => ({
+              ...gift,
+              id: crypto.randomUUID(),
+              timestamp: new Date(),
+            })),
+            visitTimestamp: new Date(),
+          };
+
+          // Add gifts to knowledge base if any
+          let updatedKnowledgeBase = state.knowledgeBase;
+          if (visitor.gifts && visitor.gifts.length > 0) {
+            updatedKnowledgeBase = [...visitor.gifts, ...state.knowledgeBase];
+          }
+
+          // Keep only last 10 visitors
+          const updatedVisitors = [visitor, ...state.visitors].slice(0, 10);
+
+          // Increase happiness and friendliness from visitor
+          const newStats = {
+            ...state.stats,
+            happiness: clamp(state.stats.happiness + 10, 0, 100),
+          };
+
+          const newPersonality = {
+            ...state.personality,
+            friendliness: clamp(state.personality.friendliness + 1, 0, 100),
+          };
+
+          set({
+            visitors: updatedVisitors,
+            knowledgeBase: updatedKnowledgeBase,
+            stats: newStats,
+            personality: newPersonality,
+          });
+        } catch (error) {
+          console.error('Error importing visitor card:', error);
+          throw new Error('Invalid visitor card format');
+        }
+      },
+
+      updateLocation: (location) => {
+        set({ currentLocation: location });
       },
     }),
     {
