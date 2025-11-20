@@ -4,15 +4,18 @@ import { Pet } from './components/Pet/Pet';
 import { Stats } from './components/Stats/Stats';
 import { Actions } from './components/Actions/Actions';
 import { ActivityLogs } from './components/Logs/ActivityLogs';
+import { Personality } from './components/Personality/Personality';
+import { Settings } from './components/Settings/Settings';
 
 function App() {
-  const { 
-    name, 
-    namePet, 
-    updateStats, 
-    lastUpdated, 
+  const {
+    name,
+    namePet,
+    updateStats,
+    lastUpdated,
     isAlive,
-    birthDate 
+    birthDate,
+    evolutionStage
   } = useTamagotchiStore();
   
   const [inputName, setInputName] = useState('');
@@ -85,13 +88,13 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-100 to-purple-100 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         <header className="text-center mb-8">
           <h1 className="text-3xl font-bold text-purple-800">
             {name} the Tamagotchi
           </h1>
           <p className="text-purple-600">
-            Age: {getAge()} {getAge() === 1 ? 'day' : 'days'} old
+            Age: {getAge()} {getAge() === 1 ? 'day' : 'days'} old • {evolutionStage.charAt(0).toUpperCase() + evolutionStage.slice(1)} Stage
           </p>
           {!isAlive && (
             <p className="text-red-600 font-bold mt-2">
@@ -100,13 +103,17 @@ function App() {
           )}
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="space-y-6">
             <Pet />
             <Actions />
           </div>
           <div className="space-y-6">
             <Stats />
+            <Personality />
+          </div>
+          <div className="space-y-6">
+            <Settings />
             <ActivityLogs />
           </div>
         </div>
