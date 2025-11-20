@@ -29,12 +29,13 @@ const ActionButton: React.FC<ActionButtonProps> = ({ onClick, icon, label, disab
 };
 
 export const Actions: React.FC = () => {
-  const { 
-    feedPet, 
-    playWithPet, 
-    cleanPet, 
-    putPetToSleep, 
+  const {
+    feedPet,
+    playWithPet,
+    cleanPet,
+    putPetToSleep,
     giveMedicine,
+    trainPet,
     isAlive,
     currentMood,
     stats
@@ -46,34 +47,40 @@ export const Actions: React.FC = () => {
     <div className="w-full max-w-md p-4 bg-white rounded-lg shadow">
       <h2 className="text-xl font-bold mb-4">Actions</h2>
       <div className="grid grid-cols-3 gap-4">
-        <ActionButton 
-          onClick={feedPet} 
-          icon="🍖" 
-          label="Feed" 
+        <ActionButton
+          onClick={feedPet}
+          icon="🍖"
+          label="Feed"
           disabled={!isAlive || isSleeping}
         />
-        <ActionButton 
-          onClick={playWithPet} 
-          icon="⚽" 
-          label="Play" 
+        <ActionButton
+          onClick={playWithPet}
+          icon="⚽"
+          label="Play"
           disabled={!isAlive || isSleeping || stats.energy < 20}
         />
-        <ActionButton 
-          onClick={cleanPet} 
-          icon="🧼" 
-          label="Clean" 
+        <ActionButton
+          onClick={cleanPet}
+          icon="🧼"
+          label="Clean"
           disabled={!isAlive || isSleeping}
         />
-        <ActionButton 
-          onClick={putPetToSleep} 
-          icon="💤" 
-          label="Sleep" 
+        <ActionButton
+          onClick={trainPet}
+          icon="📚"
+          label="Train"
+          disabled={!isAlive || isSleeping || stats.energy < 15}
+        />
+        <ActionButton
+          onClick={putPetToSleep}
+          icon="💤"
+          label="Sleep"
           disabled={!isAlive || isSleeping}
         />
-        <ActionButton 
-          onClick={giveMedicine} 
-          icon="💊" 
-          label="Medicine" 
+        <ActionButton
+          onClick={giveMedicine}
+          icon="💊"
+          label="Medicine"
           disabled={!isAlive || isSleeping || stats.health > 80}
         />
       </div>

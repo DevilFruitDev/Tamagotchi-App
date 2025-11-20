@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useTamagotchiStore } from '../../store/tamagotchiStore';
 
 export const Pet: React.FC = () => {
-  const { currentMood, isAlive } = useTamagotchiStore();
+  const { currentMood, isAlive, evolutionStage } = useTamagotchiStore();
 
   const moodAnimations = {
     happy: {
@@ -66,32 +66,53 @@ export const Pet: React.FC = () => {
     }
   };
 
+  const getEvolutionSize = () => {
+    switch (evolutionStage) {
+      case 'baby': return 'w-24 h-24 text-3xl';
+      case 'child': return 'w-28 h-28 text-4xl';
+      case 'teen': return 'w-32 h-32 text-4xl';
+      case 'adult': return 'w-36 h-36 text-5xl';
+      default: return 'w-32 h-32 text-4xl';
+    }
+  };
+
+  const getEvolutionLabel = () => {
+    return evolutionStage.charAt(0).toUpperCase() + evolutionStage.slice(1);
+  };
+
   return (
     <div className="flex flex-col items-center space-y-4">
-      <motion.div
-        className={`w-32 h-32 rounded-full flex items-center justify-center ${getMoodColor()} shadow-lg`}
-        animate={isAlive ? moodAnimations[currentMood] : {}}
-      >
-        <span className="text-4xl text-white font-bold">
-          {getMoodExpression()}
-        </span>
-      </motion.div>
-      {currentMood === 'sleeping' && (
-        <div className="absolute -mt-20 ml-24 text-2xl">
-          💤
-        </div>
-      )}
-      {currentMood === 'sick' && (
-        <div className="absolute -mt-20 ml-24 text-2xl">
-          🤒
-        </div>
-      )}
-      {currentMood === 'hungry' && (
-        <div className="absolute -mt-20 ml-24 text-2xl">
-          🍽️
-        </div>
-      )}
-      <p className="text-lg font-semibold capitalize">{currentMood}</p>
+      <div className="relative">
+        <motion.div
+          className={`${getEvolutionSize()} rounded-full flex items-center justify-center ${getMoodColor()} shadow-lg`}
+          animate={isAlive ? moodAnimations[currentMood] : {}}
+        >
+          <span className={`${getEvolutionSize().split(' ')[2]} text-white font-bold`}>
+            {getMoodExpression()}
+          </span>
+        </motion.div>
+        {currentMood === 'sleeping' && (
+          <div className="absolute -top-2 -right-2 text-2xl">
+            💤
+          </div>
+        )}
+        {currentMood === 'sick' && (
+          <div className="absolute -top-2 -right-2 text-2xl">
+            🤒
+          </div>
+        )}
+        {currentMood === 'hungry' && (
+          <div className="absolute -top-2 -right-2 text-2xl">
+            🍽️
+          </div>
+        )}
+      </div>
+      <div className="text-center">
+        <p className="text-lg font-semibold capitalize">{currentMood}</p>
+        <p className="text-sm text-purple-600 font-medium">
+          {getEvolutionLabel()} Stage
+        </p>
+      </div>
     </div>
   );
 };
