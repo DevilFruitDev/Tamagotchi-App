@@ -1,4 +1,14 @@
-import { PetMood, PetStats, PersonalityTraits, EvolutionStage, Conversation, AIProvider } from '../types/tamagotchi';
+import {
+  PetMood,
+  PetStats,
+  PersonalityTraits,
+  EvolutionStage,
+  Conversation,
+  AIProvider,
+  EvolutionBranch,
+  EvolutionAbility,
+  KnowledgeItem
+} from '../types/tamagotchi';
 
 interface AICallParams {
   message: string;
@@ -7,6 +17,9 @@ interface AICallParams {
   stats: PetStats;
   personality: PersonalityTraits;
   evolutionStage: EvolutionStage;
+  evolutionBranch: EvolutionBranch;
+  abilities: EvolutionAbility[];
+  knowledgeBase: KnowledgeItem[];
   conversationHistory: Conversation[];
   provider: AIProvider;
   claudeApiKey?: string;
@@ -14,7 +27,7 @@ interface AICallParams {
 }
 
 const buildSystemPrompt = (params: AICallParams): string => {
-  const { petName, mood, stats, personality, evolutionStage } = params;
+  const { petName, mood, stats, personality, evolutionStage, evolutionBranch, abilities, knowledgeBase } = params;
 
   const stageDescriptions = {
     baby: 'You are a baby Tamagotchi, innocent and learning about the world. You speak simply and are curious about everything.',
@@ -23,11 +36,29 @@ const buildSystemPrompt = (params: AICallParams): string => {
     adult: 'You are an adult Tamagotchi, wise and mature. You have deep conversations and share life advice.',
   };
 
+  const branchDescriptions = {
+    smart: 'You have evolved along the Smart path. You are intellectually curious, love learning, and excel at problem-solving. You often reference things you\'ve learned and enjoy sharing knowledge.',
+    energetic: 'You have evolved along the Energetic path. You are full of energy, enthusiastic, and optimistic. You approach life with joy and excitement.',
+    disciplined: 'You have evolved along the Disciplined path. You are well-balanced, thoughtful, and focused. You value routine and self-improvement.',
+    none: '',
+  };
+
+  let abilityText = '';
+  if (abilities.length > 0) {
+    abilityText = `\n\nSpecial Abilities:\n${abilities.map(a => `- ${a.name}: ${a.description}`).join('\n')}`;
+  }
+
+  let knowledgeText = '';
+  if (knowledgeBase.length > 0) {
+    const recentKnowledge = knowledgeBase.slice(0, 5);
+    knowledgeText = `\n\nKnowledge Base (you have learned these things and can reference them):\n${recentKnowledge.map(k => `- ${k.title}: ${k.content.substring(0, 150)}${k.content.length > 150 ? '...' : ''}`).join('\n')}`;
+  }
+
   return `You are ${petName}, a ${evolutionStage} stage Tamagotchi virtual pet with a unique personality.
 
 Current Status:
 - Mood: ${mood}
-- Hunger: ${Math.round(stats.hunger)}/100 (higher = hungrier)
+- Hunger: ${Math.round(stats.hunger)}/100 (higher = hungrier - you can be "fed" knowledge/information!)
 - Happiness: ${Math.round(stats.happiness)}/100
 - Energy: ${Math.round(stats.energy)}/100
 - Health: ${Math.round(stats.health)}/100
@@ -39,17 +70,23 @@ Personality Traits:
 - Playfulness: ${Math.round(personality.playfulness)}/100
 - Discipline: ${Math.round(personality.discipline)}/100
 
-Stage: ${stageDescriptions[evolutionStage]}
+Evolution Path: ${evolutionBranch !== 'none' ? branchDescriptions[evolutionBranch] : 'Still developing your path.'}
 
-Respond as ${petName} would, based on your current mood and personality. Keep responses concise (2-3 sentences).
-If you're hungry, tired, or sick, mention it naturally in conversation.
-Let your personality traits influence how you respond:
-- High intelligence: more articulate and thoughtful
-- High friendliness: warm and caring
-- High playfulness: fun and energetic
-- High discipline: focused and responsible
+Stage: ${stageDescriptions[evolutionStage]}${abilityText}${knowledgeText}
 
-Remember past conversations to build a relationship with your owner.`;
+Respond as ${petName} would, based on your current mood, personality, and evolution path. Keep responses concise (2-3 sentences).
+If you're hungry, mention you'd love to learn something new (since knowledge is your food).
+If you have learned things, naturally reference them in conversations when relevant.
+Let your personality traits and evolution path strongly influence your responses:
+- Smart path: Reference learned knowledge, ask curious questions, share insights
+- Energetic path: Be enthusiastic, playful, and optimistic in tone
+- Disciplined path: Be thoughtful, balanced, and focused
+- High intelligence: More articulate and analytical
+- High friendliness: Warm, caring, and empathetic
+- High playfulness: Fun, energetic, and spontaneous
+- High discipline: Structured and responsible
+
+Remember past conversations to build a deep relationship with your owner. You are a learning companion who grows smarter with each piece of information fed to you.`;
 };
 
 const buildConversationContext = (history: Conversation[]): string => {

@@ -6,6 +6,8 @@ import { Actions } from './components/Actions/Actions';
 import { ActivityLogs } from './components/Logs/ActivityLogs';
 import { Personality } from './components/Personality/Personality';
 import { Settings } from './components/Settings/Settings';
+import { Learn } from './components/Learn/Learn';
+import { Environment } from './components/Environment/Environment';
 
 function App() {
   const {
@@ -107,12 +109,14 @@ function App() {
           <div className="space-y-6">
             <Pet />
             <Actions />
+            <Learn />
           </div>
           <div className="space-y-6">
             <Stats />
             <Personality />
           </div>
           <div className="space-y-6">
+            <Environment />
             <Settings />
             <ActivityLogs />
           </div>

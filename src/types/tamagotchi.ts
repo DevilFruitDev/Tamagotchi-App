@@ -64,6 +64,23 @@ export interface Conversation {
   mood: PetMood;
 }
 
+export interface KnowledgeItem {
+  id: string;
+  title: string;
+  content: string;
+  source: 'file' | 'url' | 'conversation' | 'manual';
+  timestamp: Date;
+  category?: string;
+  tags?: string[];
+}
+
+export interface Environment {
+  houseTraining: number;      // 0-100, affects behavior and abilities
+  cleanliness: number;         // 0-100, environment cleanliness
+  enrichment: number;          // 0-100, toys and activities available
+  knowledgeLevel: number;      // 0-100, accumulated learning
+}
+
 export interface AIConfig {
   provider: AIProvider;
   claudeApiKey?: string;
@@ -80,6 +97,8 @@ export interface TamagotchiState {
   stats: PetStats;
   personality: PersonalityTraits;
   careQuality: CareQuality;
+  environment: Environment;
+  knowledgeBase: KnowledgeItem[];
   activityLogs: ActivityLog[];
   conversations: Conversation[];
   isAlive: boolean;
@@ -94,9 +113,13 @@ export interface TamagotchiActions {
   putPetToSleep: () => void;
   giveMedicine: () => void;
   trainPet: () => void;
+  feedKnowledge: (knowledge: Omit<KnowledgeItem, 'id' | 'timestamp'>) => void;
+  browseAndLearn: (url: string) => Promise<void>;
+  cleanEnvironment: () => void;
   updateStats: (elapsed: number) => void;
   namePet: (name: string) => void;
   setAIProvider: (provider: AIProvider, apiKey?: string) => void;
   sendMessage: (message: string) => Promise<string>;
   exportConversations: () => void;
+  exportKnowledge: () => void;
 }

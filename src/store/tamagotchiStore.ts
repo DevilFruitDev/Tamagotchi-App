@@ -11,7 +11,8 @@ import {
   CareQuality,
   EvolutionBranch,
   EvolutionAbility,
-  StatModifiers
+  StatModifiers,
+  KnowledgeItem
 } from '../types/tamagotchi';
 
 const DECAY_RATE = {
@@ -292,6 +293,13 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
         healthScore: 100,
         interactionCount: 0,
       },
+      environment: {
+        houseTraining: 20,
+        cleanliness: 80,
+        enrichment: 50,
+        knowledgeLevel: 0,
+      },
+      knowledgeBase: [],
       activityLogs: [],
       conversations: [],
       isAlive: true,
@@ -657,6 +665,9 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
             stats: state.stats,
             personality: state.personality,
             evolutionStage: state.evolutionStage,
+            evolutionBranch: state.evolutionBranch,
+            abilities: state.abilities,
+            knowledgeBase: state.knowledgeBase.slice(0, 10), // Pass top 10 knowledge items
             conversationHistory: state.conversations.slice(-5), // Last 5 conversations for context
             provider: state.aiConfig.provider,
             claudeApiKey: state.aiConfig.claudeApiKey,
@@ -714,6 +725,136 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
         const link = document.createElement('a');
         link.href = url;
         link.download = `${state.name}-conversations-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      },
+
+      feedKnowledge: (knowledge) => {
+        const state = get();
+        if (!state.isAlive) return;
+
+        const newKnowledge: KnowledgeItem = {
+          ...knowledge,
+          id: crypto.randomUUID(),
+          timestamp: new Date(),
+        };
+
+        // Add to knowledge base
+        const updatedKnowledgeBase = [newKnowledge, ...state.knowledgeBase];
+
+        // Update environment knowledge level
+        const knowledgeGain = Math.min(5, 100 - state.environment.knowledgeLevel);
+        const newEnvironment = {
+          ...state.environment,
+          knowledgeLevel: clamp(state.environment.knowledgeLevel + knowledgeGain, 0, 100),
+        };
+
+        // "Feeding" knowledge reduces hunger and increases intelligence
+        const newStats = {
+          ...state.stats,
+          hunger: clamp(state.stats.hunger - 15, 0, 100),
+        };
+
+        const newPersonality = {
+          ...state.personality,
+          intelligence: clamp(state.personality.intelligence + 0.5, 0, 100),
+        };
+
+        set({
+          knowledgeBase: updatedKnowledgeBase,
+          environment: newEnvironment,
+          stats: newStats,
+          personality: newPersonality,
+        });
+      },
+
+      browseAndLearn: async (url: string) => {
+        const state = get();
+        if (!state.isAlive) return;
+
+        try {
+          // In a real implementation, you'd fetch and process the URL content
+          // For now, we'll create a placeholder knowledge item
+          const newKnowledge: KnowledgeItem = {
+            id: crypto.randomUUID(),
+            title: `Learned from ${url}`,
+            content: `Information gathered from browsing: ${url}`,
+            source: 'url',
+            timestamp: new Date(),
+            tags: ['web', 'browsed'],
+          };
+
+          const updatedKnowledgeBase = [newKnowledge, ...state.knowledgeBase];
+
+          const knowledgeGain = Math.min(3, 100 - state.environment.knowledgeLevel);
+          const newEnvironment = {
+            ...state.environment,
+            knowledgeLevel: clamp(state.environment.knowledgeLevel + knowledgeGain, 0, 100),
+          };
+
+          const newPersonality = {
+            ...state.personality,
+            intelligence: clamp(state.personality.intelligence + 0.3, 0, 100),
+          };
+
+          set({
+            knowledgeBase: updatedKnowledgeBase,
+            environment: newEnvironment,
+            personality: newPersonality,
+          });
+        } catch (error) {
+          console.error('Error browsing URL:', error);
+        }
+      },
+
+      cleanEnvironment: () => {
+        const state = get();
+        if (!state.isAlive) return;
+
+        const newEnvironment = {
+          ...state.environment,
+          cleanliness: clamp(state.environment.cleanliness + 30, 0, 100),
+        };
+
+        // Clean environment also improves pet mood
+        const newStats = {
+          ...state.stats,
+          happiness: clamp(state.stats.happiness + 5, 0, 100),
+        };
+
+        set({
+          environment: newEnvironment,
+          stats: newStats,
+        });
+      },
+
+      exportKnowledge: () => {
+        const state = get();
+
+        const exportData = {
+          petName: state.name,
+          exportDate: new Date().toISOString(),
+          totalKnowledge: state.knowledgeBase.length,
+          knowledgeLevel: state.environment.knowledgeLevel,
+          knowledge: state.knowledgeBase.map(item => ({
+            title: item.title,
+            content: item.content,
+            source: item.source,
+            timestamp: item.timestamp,
+            category: item.category,
+            tags: item.tags,
+          })),
+        };
+
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${state.name}-knowledge-${new Date().toISOString().split('T')[0]}.json`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
