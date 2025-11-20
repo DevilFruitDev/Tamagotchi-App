@@ -775,12 +775,48 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
         if (!state.isAlive) return;
 
         try {
-          // In a real implementation, you'd fetch and process the URL content
-          // For now, we'll create a placeholder knowledge item
+          // Use CORS proxy to fetch the URL content
+          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+          const response = await fetch(proxyUrl);
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          const htmlContent = data.contents;
+
+          // Extract text from HTML
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(htmlContent, 'text/html');
+
+          // Remove script and style elements
+          const scripts = doc.querySelectorAll('script, style, nav, footer, header');
+          scripts.forEach(el => el.remove());
+
+          // Get text content
+          let textContent = doc.body.textContent || '';
+
+          // Clean up whitespace
+          textContent = textContent
+            .replace(/\s+/g, ' ')
+            .trim()
+            .substring(0, 3000); // Limit to 3000 chars
+
+          // Extract title
+          const pageTitle = doc.title || url.split('/').pop() || 'Web Page';
+
+          // Extract meta description if available
+          const metaDesc = doc.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+
+          const fullContent = metaDesc
+            ? `${metaDesc}\n\n${textContent}`
+            : textContent;
+
           const newKnowledge: KnowledgeItem = {
             id: crypto.randomUUID(),
-            title: `Learned from ${url}`,
-            content: `Information gathered from browsing: ${url}`,
+            title: pageTitle,
+            content: fullContent,
             source: 'url',
             timestamp: new Date(),
             tags: ['web', 'browsed'],
@@ -788,24 +824,32 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
 
           const updatedKnowledgeBase = [newKnowledge, ...state.knowledgeBase];
 
-          const knowledgeGain = Math.min(3, 100 - state.environment.knowledgeLevel);
+          const knowledgeGain = Math.min(10, 100 - state.environment.knowledgeLevel);
           const newEnvironment = {
             ...state.environment,
             knowledgeLevel: clamp(state.environment.knowledgeLevel + knowledgeGain, 0, 100),
           };
 
+          // Learning from web gives more intelligence boost
+          const newStats = {
+            ...state.stats,
+            hunger: clamp(state.stats.hunger - 20, 0, 100),
+          };
+
           const newPersonality = {
             ...state.personality,
-            intelligence: clamp(state.personality.intelligence + 0.3, 0, 100),
+            intelligence: clamp(state.personality.intelligence + 1, 0, 100),
           };
 
           set({
             knowledgeBase: updatedKnowledgeBase,
             environment: newEnvironment,
+            stats: newStats,
             personality: newPersonality,
           });
         } catch (error) {
           console.error('Error browsing URL:', error);
+          throw error; // Re-throw so UI can handle it
         }
       },
 
