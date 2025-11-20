@@ -34,6 +34,7 @@ export const Actions: React.FC = () => {
     playWithPet,
     cleanPet,
     putPetToSleep,
+    wakeUpPet,
     giveMedicine,
     trainPet,
     isAlive,
@@ -71,12 +72,21 @@ export const Actions: React.FC = () => {
           label="Train"
           disabled={!isAlive || isSleeping || stats.energy < 15}
         />
-        <ActionButton
-          onClick={putPetToSleep}
-          icon="💤"
-          label="Sleep"
-          disabled={!isAlive || isSleeping}
-        />
+        {isSleeping ? (
+          <ActionButton
+            onClick={wakeUpPet}
+            icon="⏰"
+            label="Wake Up"
+            disabled={!isAlive}
+          />
+        ) : (
+          <ActionButton
+            onClick={putPetToSleep}
+            icon="💤"
+            label="Sleep"
+            disabled={!isAlive}
+          />
+        )}
         <ActionButton
           onClick={giveMedicine}
           icon="💊"
