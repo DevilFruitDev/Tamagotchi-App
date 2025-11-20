@@ -34,7 +34,51 @@ Take care of your pet with various actions:
 - **Train** 📚 - Increases intelligence and discipline (costs energy)
 - **Clean** 🧼 - Improves cleanliness and mood
 - **Sleep** 💤 - Restores energy completely
+- **Wake Up** ⏰ - Wake your pet early (appears when sleeping)
 - **Medicine** 💊 - Heals when health is low
+
+### 📚 Knowledge Learning System
+Your Tamagotchi can learn! Feed it information instead of food:
+- **File Upload** 📄 - Upload .txt, .md, or .json files
+- **Manual Entry** 🧠 - Type knowledge directly
+- **Web Browsing** 🌐 - Fetch and learn from any URL
+- AI remembers learned knowledge and references it in conversations
+- Knowledge reduces hunger and increases intelligence
+
+### 🏠 House & Environment
+Your Tamagotchi has a home with 5 rooms:
+- **Bedroom** 🛏️ - For resting and sleeping
+- **Study** 📚 - For learning and training
+- **Living Room** 🛋️ - For relaxing
+- **Play Area** 🎮 - For having fun
+- **Outside** 🌳 - For exploring
+- Auto-location based on pet's state and mood
+- Clean environment action to maintain home cleanliness
+
+### 👥 Social Features
+Connect with other Tamagotchi owners:
+- **Export Visitor Cards** - Create cards with messages and knowledge gifts
+- **Import Visitor Cards** - Receive visitors from friends
+- **Guestbook** - See last 10 visitors with their messages
+- Visitors bring knowledge gifts that get added to your pet's learning
+- Increases happiness and friendliness
+
+### ⏰ Reminders & Notifications
+Never forget to care for your pet:
+- **Create Reminders** - Set tasks with custom messages
+- **Smart "Miss You" Detection** - Pet notifies when lonely (30+ min)
+- **Browser Notifications** - Desktop notifications when due
+- **Recurring Reminders** - Auto-repeat at intervals
+- Multiple reminder types: Task, Care, Miss You, Custom
+
+### 💬 AI Chat & Autonomy
+Your Tamagotchi has a mind of its own:
+- **Real-time Chat** - Full conversation interface
+- **AI Suggestions** - Pet makes requests and recommendations
+- **Autonomous Needs** - Asks for food, play, cleaning when needed
+- **Environment Awareness** - AI knows its location and home state
+- **Personality-Driven** - Suggestions match evolution path
+- **One-Click Actions** - Execute AI suggestions instantly
 
 ### 📊 Stats & Tracking
 Monitor your Tamagotchi's well-being:
@@ -45,21 +89,32 @@ Monitor your Tamagotchi's well-being:
 - **Cleanliness**: Clean regularly to prevent sickness
 - **Care Quality**: Track how well you're caring for your pet
 
-## Setup
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js (v16 or higher)
+- npm (comes with Node.js)
 
 ### Installation
 
 ```bash
+# 1. Navigate to the project folder
+cd Tamagotchi-App
+
+# 2. Install dependencies
 npm install
-```
 
-### Running the App
+# 3. Verify setup (optional)
+npm run verify
 
-```bash
+# 4. Start the app
 npm start
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+
+### Having Issues?
+See **[SETUP.md](./SETUP.md)** for detailed troubleshooting and installation help.
 
 ### AI Configuration
 
