@@ -2,6 +2,8 @@ export type PetMood = 'happy' | 'sad' | 'hungry' | 'tired' | 'sick' | 'dirty' | 
 
 export type EvolutionStage = 'baby' | 'child' | 'teen' | 'adult';
 
+export type EvolutionBranch = 'none' | 'smart' | 'energetic' | 'disciplined';
+
 export type AIProvider = 'claude' | 'openai' | 'none';
 
 export interface PetStats {
@@ -17,6 +19,25 @@ export interface PersonalityTraits {
   friendliness: number;    // 0-100, increased by interactions
   playfulness: number;     // 0-100, increased by play activities
   discipline: number;      // 0-100, increased by consistent care
+}
+
+export interface EvolutionAbility {
+  name: string;
+  description: string;
+  statDecayModifier?: number;    // Multiplier for stat decay (0.7 = 30% slower)
+  energyCostModifier?: number;   // Multiplier for energy costs (0.8 = 20% less)
+  trainingBonus?: number;        // Extra intelligence gain from training
+  happinessBonus?: number;       // Extra happiness from interactions
+  healthRegenBonus?: number;     // Bonus health regeneration
+}
+
+export interface StatModifiers {
+  hungerDecayRate: number;      // Multiplier for hunger increase
+  happinessDecayRate: number;   // Multiplier for happiness decrease
+  energyDecayRate: number;      // Multiplier for energy decrease
+  cleanlinessDecayRate: number; // Multiplier for cleanliness decrease
+  trainingEnergyCost: number;   // Energy cost for training
+  playEnergyCost: number;       // Energy cost for playing
 }
 
 export interface CareQuality {
@@ -54,6 +75,8 @@ export interface TamagotchiState {
   birthDate: Date;
   currentMood: PetMood;
   evolutionStage: EvolutionStage;
+  evolutionBranch: EvolutionBranch;
+  abilities: EvolutionAbility[];
   stats: PetStats;
   personality: PersonalityTraits;
   careQuality: CareQuality;

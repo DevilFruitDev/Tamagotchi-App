@@ -29,7 +29,18 @@ const TraitBar: React.FC<TraitBarProps> = ({ label, value, color, icon }) => {
 };
 
 export const Personality: React.FC = () => {
-  const { personality, careQuality, evolutionStage } = useTamagotchiStore();
+  const { personality, careQuality, evolutionStage, evolutionBranch, abilities } = useTamagotchiStore();
+
+  const getBranchDisplay = () => {
+    switch (evolutionBranch) {
+      case 'smart': return { name: 'Smart', icon: '🧠', color: 'text-indigo-600' };
+      case 'energetic': return { name: 'Energetic', icon: '⚡', color: 'text-yellow-600' };
+      case 'disciplined': return { name: 'Disciplined', icon: '⭐', color: 'text-blue-600' };
+      default: return { name: 'Neutral', icon: '🌱', color: 'text-gray-600' };
+    }
+  };
+
+  const branch = getBranchDisplay();
 
   return (
     <div className="w-full max-w-md p-4 bg-white rounded-lg shadow space-y-4">
@@ -98,6 +109,37 @@ export const Personality: React.FC = () => {
           {evolutionStage === 'adult' && '👨 Fully grown! Keep caring for your pet'}
         </div>
       </div>
+
+      {evolutionBranch !== 'none' && (
+        <div className="pt-4 border-t">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Evolution Path:</span>
+            <span className={`text-lg font-bold ${branch.color} flex items-center gap-1`}>
+              <span>{branch.icon}</span>
+              <span>{branch.name}</span>
+            </span>
+          </div>
+          {evolutionStage === 'baby' && (
+            <div className="text-xs text-gray-500">
+              Evolution path will be determined when you reach Child stage based on your highest personality trait!
+            </div>
+          )}
+        </div>
+      )}
+
+      {abilities.length > 0 && (
+        <div className="pt-4 border-t">
+          <h3 className="font-semibold text-md mb-2">Special Abilities</h3>
+          <div className="space-y-2">
+            {abilities.map((ability, index) => (
+              <div key={index} className="bg-purple-50 p-2 rounded">
+                <p className="font-medium text-sm text-purple-900">{ability.name}</p>
+                <p className="text-xs text-purple-700">{ability.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

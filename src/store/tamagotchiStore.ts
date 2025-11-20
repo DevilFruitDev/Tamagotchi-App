@@ -1,6 +1,18 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { TamagotchiState, TamagotchiActions, PetMood, ActivityLog, PetStats, EvolutionStage, PersonalityTraits, CareQuality } from '../types/tamagotchi';
+import {
+  TamagotchiState,
+  TamagotchiActions,
+  PetMood,
+  ActivityLog,
+  PetStats,
+  EvolutionStage,
+  PersonalityTraits,
+  CareQuality,
+  EvolutionBranch,
+  EvolutionAbility,
+  StatModifiers
+} from '../types/tamagotchi';
 
 const DECAY_RATE = {
   hunger: 0.05,    // increases 0.05 per second
@@ -71,6 +83,186 @@ const updateCareQuality = (stats: PetStats, careQuality: CareQuality): CareQuali
   };
 };
 
+// Generate random personality traits (30-70 range with slight bias towards balance)
+const generateRandomPersonality = (): PersonalityTraits => {
+  const random = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+  return {
+    intelligence: random(30, 70),
+    friendliness: random(30, 70),
+    playfulness: random(30, 70),
+    discipline: random(30, 70),
+  };
+};
+
+// Determine evolution branch based on highest personality trait
+const determineEvolutionBranch = (
+  currentStage: EvolutionStage,
+  personality: PersonalityTraits,
+  currentBranch: EvolutionBranch
+): EvolutionBranch => {
+  // Only determine branch when evolving from baby to child
+  if (currentStage !== 'child' || currentBranch !== 'none') {
+    return currentBranch;
+  }
+
+  // Find highest trait
+  const traits = [
+    { name: 'intelligence' as const, value: personality.intelligence },
+    { name: 'playfulness' as const, value: personality.playfulness },
+    { name: 'discipline' as const, value: personality.discipline },
+  ];
+
+  const highestTrait = traits.reduce((max, trait) =>
+    trait.value > max.value ? trait : max
+  );
+
+  // Map trait to branch
+  if (highestTrait.name === 'intelligence' && highestTrait.value >= 60) {
+    return 'smart';
+  } else if (highestTrait.name === 'playfulness' && highestTrait.value >= 60) {
+    return 'energetic';
+  } else if (highestTrait.name === 'discipline' && highestTrait.value >= 60) {
+    return 'disciplined';
+  }
+
+  return 'none'; // Neutral path if no trait is high enough
+};
+
+// Get abilities for current evolution branch and stage
+const getAbilities = (branch: EvolutionBranch, stage: EvolutionStage): EvolutionAbility[] => {
+  if (branch === 'none' || stage === 'baby') {
+    return [];
+  }
+
+  const abilities: EvolutionAbility[] = [];
+
+  if (branch === 'smart') {
+    if (stage === 'child') {
+      abilities.push({
+        name: 'Quick Learner',
+        description: 'Training costs 30% less energy and grants +0.5 intelligence bonus',
+        energyCostModifier: 0.7,
+        trainingBonus: 0.5,
+      });
+    }
+    if (stage === 'teen') {
+      abilities.push({
+        name: 'Sharp Mind',
+        description: 'Hunger increases 20% slower, training bonus increased to +1.0',
+        trainingBonus: 1.0,
+      });
+    }
+    if (stage === 'adult') {
+      abilities.push({
+        name: 'Genius',
+        description: 'All energy costs reduced by 20%, training gives +1.5 intelligence',
+        energyCostModifier: 0.8,
+        trainingBonus: 1.5,
+      });
+    }
+  } else if (branch === 'energetic') {
+    if (stage === 'child') {
+      abilities.push({
+        name: 'Playful Spirit',
+        description: 'Playing costs 30% less energy and grants +5 happiness bonus',
+        energyCostModifier: 0.7,
+        happinessBonus: 5,
+      });
+    }
+    if (stage === 'teen') {
+      abilities.push({
+        name: 'Endless Energy',
+        description: 'Happiness decays 30% slower, play happiness bonus +10',
+        happinessBonus: 10,
+      });
+    }
+    if (stage === 'adult') {
+      abilities.push({
+        name: 'Boundless Joy',
+        description: 'Energy decays 20% slower, play gives +15 happiness and costs 50% less',
+        energyCostModifier: 0.5,
+        happinessBonus: 15,
+      });
+    }
+  } else if (branch === 'disciplined') {
+    if (stage === 'child') {
+      abilities.push({
+        name: 'Good Habits',
+        description: 'All stats decay 20% slower',
+        statDecayModifier: 0.8,
+      });
+    }
+    if (stage === 'teen') {
+      abilities.push({
+        name: 'Self-Care',
+        description: 'Stats decay 30% slower, slight health regeneration',
+        statDecayModifier: 0.7,
+        healthRegenBonus: 0.5,
+      });
+    }
+    if (stage === 'adult') {
+      abilities.push({
+        name: 'Perfect Balance',
+        description: 'Stats decay 40% slower, moderate health regeneration',
+        statDecayModifier: 0.6,
+        healthRegenBonus: 1.0,
+      });
+    }
+  }
+
+  return abilities;
+};
+
+// Calculate stat modifiers based on personality and abilities
+const calculateStatModifiers = (
+  personality: PersonalityTraits,
+  abilities: EvolutionAbility[]
+): StatModifiers => {
+  let modifiers: StatModifiers = {
+    hungerDecayRate: 1.0,
+    happinessDecayRate: 1.0,
+    energyDecayRate: 1.0,
+    cleanlinessDecayRate: 1.0,
+    trainingEnergyCost: 10,
+    playEnergyCost: 15,
+  };
+
+  // Personality-based modifiers (high = 70+)
+  if (personality.intelligence >= 70) {
+    modifiers.hungerDecayRate *= 0.85; // 15% slower hunger
+  }
+  if (personality.playfulness >= 70) {
+    modifiers.happinessDecayRate *= 0.75; // 25% slower happiness decay
+    modifiers.playEnergyCost -= 3; // 3 less energy for play
+  }
+  if (personality.discipline >= 70) {
+    modifiers.hungerDecayRate *= 0.85;
+    modifiers.happinessDecayRate *= 0.85;
+    modifiers.energyDecayRate *= 0.85;
+    modifiers.cleanlinessDecayRate *= 0.85;
+  }
+  if (personality.friendliness >= 70) {
+    // Friendliness affects happiness from interactions (applied in actions)
+  }
+
+  // Ability-based modifiers
+  abilities.forEach(ability => {
+    if (ability.statDecayModifier) {
+      modifiers.hungerDecayRate *= ability.statDecayModifier;
+      modifiers.happinessDecayRate *= ability.statDecayModifier;
+      modifiers.energyDecayRate *= ability.statDecayModifier;
+      modifiers.cleanlinessDecayRate *= ability.statDecayModifier;
+    }
+    if (ability.energyCostModifier) {
+      modifiers.trainingEnergyCost *= ability.energyCostModifier;
+      modifiers.playEnergyCost *= ability.energyCostModifier;
+    }
+  });
+
+  return modifiers;
+};
+
 export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
   persist(
     (set, get) => ({
@@ -79,6 +271,8 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
       birthDate: new Date(),
       currentMood: 'happy',
       evolutionStage: 'baby',
+      evolutionBranch: 'none',
+      abilities: [],
       stats: {
         hunger: 50,
         happiness: 100,
@@ -87,10 +281,10 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
         cleanliness: 100,
       },
       personality: {
-        intelligence: 30,
+        intelligence: 50,
         friendliness: 50,
         playfulness: 50,
-        discipline: 30,
+        discipline: 50,
       },
       careQuality: {
         feedingScore: 70,
@@ -144,13 +338,30 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
 
       playWithPet: () => {
         const state = get();
-        if (!state.isAlive || state.stats.energy < 20) return;
+
+        // Calculate energy cost with modifiers
+        const modifiers = calculateStatModifiers(state.personality, state.abilities);
+        const energyCost = Math.round(modifiers.playEnergyCost);
+
+        if (!state.isAlive || state.stats.energy < energyCost) return;
 
         const statsBefore = { ...state.stats };
+
+        // Calculate happiness bonus from abilities
+        const abilityHappinessBonus = state.abilities.reduce(
+          (total, ability) => total + (ability.happinessBonus || 0),
+          0
+        );
+
+        // High friendliness gives +15% happiness from interactions
+        const friendlinessBonus = state.personality.friendliness >= 70 ? 3 : 0;
+
+        const totalHappinessGain = 20 + abilityHappinessBonus + friendlinessBonus;
+
         const statsAfter = {
           ...state.stats,
-          happiness: clamp(state.stats.happiness + 20, 0, 100),
-          energy: clamp(state.stats.energy - 15, 0, 100),
+          happiness: clamp(state.stats.happiness + totalHappinessGain, 0, 100),
+          energy: clamp(state.stats.energy - energyCost, 0, 100),
           hunger: clamp(state.stats.hunger + 10, 0, 100),
         };
 
@@ -165,6 +376,8 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
         };
 
         const newEvolutionStage = getEvolutionStage(state.birthDate, newCareQuality);
+        const newBranch = determineEvolutionBranch(newEvolutionStage, newPersonality, state.evolutionBranch);
+        const newAbilities = getAbilities(newBranch, newEvolutionStage);
 
         set({
           stats: statsAfter,
@@ -172,6 +385,8 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
           personality: newPersonality,
           careQuality: newCareQuality,
           evolutionStage: newEvolutionStage,
+          evolutionBranch: newBranch,
+          abilities: newAbilities,
           activityLogs: [
             createActivityLog('play', statsBefore, statsAfter),
             ...state.activityLogs,
@@ -276,26 +491,42 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
 
       trainPet: () => {
         const state = get();
-        if (!state.isAlive || state.stats.energy < 15) return;
+
+        // Calculate energy cost with modifiers
+        const modifiers = calculateStatModifiers(state.personality, state.abilities);
+        const energyCost = Math.round(modifiers.trainingEnergyCost);
+
+        if (!state.isAlive || state.stats.energy < energyCost) return;
 
         const statsBefore = { ...state.stats };
         const statsAfter = {
           ...state.stats,
-          energy: clamp(state.stats.energy - 10, 0, 100),
+          energy: clamp(state.stats.energy - energyCost, 0, 100),
           hunger: clamp(state.stats.hunger + 5, 0, 100),
         };
 
         const newCareQuality = updateCareQuality(statsAfter, state.careQuality);
         newCareQuality.interactionCount += 1;
 
+        // Calculate training bonus from abilities
+        const abilityTrainingBonus = state.abilities.reduce(
+          (total, ability) => total + (ability.trainingBonus || 0),
+          0
+        );
+
+        // Base intelligence gain + ability bonuses
+        const intelligenceGain = 1.5 + abilityTrainingBonus;
+
         // Training increases intelligence and discipline
         const newPersonality = {
           ...state.personality,
-          intelligence: clamp(state.personality.intelligence + 1.5, 0, 100),
+          intelligence: clamp(state.personality.intelligence + intelligenceGain, 0, 100),
           discipline: clamp(state.personality.discipline + 1, 0, 100),
         };
 
         const newEvolutionStage = getEvolutionStage(state.birthDate, newCareQuality);
+        const newBranch = determineEvolutionBranch(newEvolutionStage, newPersonality, state.evolutionBranch);
+        const newAbilities = getAbilities(newBranch, newEvolutionStage);
 
         set({
           stats: statsAfter,
@@ -303,6 +534,8 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
           personality: newPersonality,
           careQuality: newCareQuality,
           evolutionStage: newEvolutionStage,
+          evolutionBranch: newBranch,
+          abilities: newAbilities,
           activityLogs: [
             createActivityLog('train', statsBefore, statsAfter),
             ...state.activityLogs,
@@ -316,17 +549,45 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
 
         const secondsElapsed = elapsed / 1000;
 
+        // Calculate stat modifiers based on personality and abilities
+        const modifiers = calculateStatModifiers(state.personality, state.abilities);
+
         let newStats = {
-          hunger: clamp(state.stats.hunger + DECAY_RATE.hunger * secondsElapsed, 0, 100),
-          happiness: clamp(state.stats.happiness - DECAY_RATE.happiness * secondsElapsed, 0, 100),
-          energy: clamp(state.stats.energy - DECAY_RATE.energy * secondsElapsed, 0, 100),
+          hunger: clamp(
+            state.stats.hunger + DECAY_RATE.hunger * secondsElapsed * modifiers.hungerDecayRate,
+            0,
+            100
+          ),
+          happiness: clamp(
+            state.stats.happiness - DECAY_RATE.happiness * secondsElapsed * modifiers.happinessDecayRate,
+            0,
+            100
+          ),
+          energy: clamp(
+            state.stats.energy - DECAY_RATE.energy * secondsElapsed * modifiers.energyDecayRate,
+            0,
+            100
+          ),
           health: state.stats.health,
-          cleanliness: clamp(state.stats.cleanliness - DECAY_RATE.cleanliness * secondsElapsed, 0, 100),
+          cleanliness: clamp(
+            state.stats.cleanliness - DECAY_RATE.cleanliness * secondsElapsed * modifiers.cleanlinessDecayRate,
+            0,
+            100
+          ),
         };
 
         // Health decay when other stats are low
         if (newStats.hunger > 90 || newStats.cleanliness < 20 || newStats.happiness < 20) {
           newStats.health = clamp(newStats.health - 0.01 * secondsElapsed, 0, 100);
+        }
+
+        // Health regeneration from abilities
+        const healthRegen = state.abilities.reduce(
+          (total, ability) => total + (ability.healthRegenBonus || 0),
+          0
+        );
+        if (healthRegen > 0 && newStats.health < 100) {
+          newStats.health = clamp(newStats.health + healthRegen * secondsElapsed * 0.1, 0, 100);
         }
 
         // Check if pet dies
@@ -335,18 +596,34 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
         const newCareQuality = updateCareQuality(newStats, state.careQuality);
         const newEvolutionStage = getEvolutionStage(state.birthDate, newCareQuality);
 
+        // Check for evolution and update branch/abilities
+        const newBranch = determineEvolutionBranch(
+          newEvolutionStage,
+          state.personality,
+          state.evolutionBranch
+        );
+        const newAbilities = getAbilities(newBranch, newEvolutionStage);
+
         set({
           stats: newStats,
           currentMood: isAlive ? getMood(newStats) : 'sad',
           isAlive,
           careQuality: newCareQuality,
           evolutionStage: newEvolutionStage,
+          evolutionBranch: newBranch,
+          abilities: newAbilities,
           lastUpdated: new Date(),
         });
       },
 
       namePet: (name: string) => {
-        set({ name });
+        // Generate random personality when pet is named (birth moment)
+        const randomPersonality = generateRandomPersonality();
+        set({
+          name,
+          personality: randomPersonality,
+          birthDate: new Date(), // Reset birth date
+        });
       },
 
       setAIProvider: (provider, apiKey) => {
