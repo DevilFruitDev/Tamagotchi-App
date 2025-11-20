@@ -4,8 +4,8 @@ import { useTamagotchiStore } from '../../store/tamagotchiStore';
 
 export const Chat: React.FC = () => {
   const {
-    conversations,
-    aiSuggestions,
+    conversations = [],
+    aiSuggestions = [],
     sendMessage,
     acknowledgeSuggestion,
     executeSuggestion,
@@ -16,6 +16,7 @@ export const Chat: React.FC = () => {
 
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom on new messages
@@ -23,16 +24,31 @@ export const Chat: React.FC = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversations]);
 
+  // Clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [error]);
+
   const handleSendMessage = async () => {
     if (message.trim() && !isSending) {
       setIsSending(true);
+      setError('');
       const userMessage = message;
       setMessage('');
 
       try {
-        await sendMessage(userMessage);
-      } catch (error) {
-        console.error('Chat error:', error);
+        const response = await sendMessage(userMessage);
+        if (response && response.includes('Sorry')) {
+          setError(response);
+        }
+      } catch (err) {
+        console.error('Chat error:', err);
+        setError('Failed to send message. Please check your AI configuration.');
+        setMessage(userMessage); // Restore message if failed
       } finally {
         setIsSending(false);
       }
@@ -83,6 +99,17 @@ export const Chat: React.FC = () => {
   return (
     <div className="w-full max-w-md p-4 bg-white rounded-lg shadow flex flex-col" style={{ height: '500px' }}>
       <h2 className="text-xl font-bold mb-4">💬 Chat with {name}</h2>
+
+      {/* Error Message */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800"
+        >
+          ⚠️ {error}
+        </motion.div>
+      )}
 
       {/* Active AI Suggestions */}
       {activeSuggestions.length > 0 && (

@@ -1254,6 +1254,82 @@ export const useTamagotchiStore = create<TamagotchiState & TamagotchiActions>()(
     }),
     {
       name: 'tamagotchi-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Convert date strings back to Date objects
+          if (state.birthDate && typeof state.birthDate === 'string') {
+            state.birthDate = new Date(state.birthDate);
+          }
+          if (state.lastUpdated && typeof state.lastUpdated === 'string') {
+            state.lastUpdated = new Date(state.lastUpdated);
+          }
+          if (state.lastInteractionTime && typeof state.lastInteractionTime === 'string') {
+            state.lastInteractionTime = new Date(state.lastInteractionTime);
+          }
+
+          // Convert dates in arrays
+          if (state.activityLogs) {
+            state.activityLogs = state.activityLogs.map((log: any) => ({
+              ...log,
+              timestamp: typeof log.timestamp === 'string' ? new Date(log.timestamp) : log.timestamp,
+            }));
+          }
+
+          if (state.conversations) {
+            state.conversations = state.conversations.map((conv: any) => ({
+              ...conv,
+              timestamp: typeof conv.timestamp === 'string' ? new Date(conv.timestamp) : conv.timestamp,
+              aiRecommendation: conv.aiRecommendation ? {
+                ...conv.aiRecommendation,
+                timestamp: typeof conv.aiRecommendation.timestamp === 'string'
+                  ? new Date(conv.aiRecommendation.timestamp)
+                  : conv.aiRecommendation.timestamp,
+              } : undefined,
+            }));
+          }
+
+          if (state.knowledgeBase) {
+            state.knowledgeBase = state.knowledgeBase.map((item: any) => ({
+              ...item,
+              timestamp: typeof item.timestamp === 'string' ? new Date(item.timestamp) : item.timestamp,
+            }));
+          }
+
+          if (state.visitors) {
+            state.visitors = state.visitors.map((visitor: any) => ({
+              ...visitor,
+              visitTimestamp: typeof visitor.visitTimestamp === 'string'
+                ? new Date(visitor.visitTimestamp)
+                : visitor.visitTimestamp,
+              gifts: visitor.gifts?.map((gift: any) => ({
+                ...gift,
+                timestamp: typeof gift.timestamp === 'string' ? new Date(gift.timestamp) : gift.timestamp,
+              })),
+            }));
+          }
+
+          if (state.reminders) {
+            state.reminders = state.reminders.map((reminder: any) => ({
+              ...reminder,
+              scheduledFor: typeof reminder.scheduledFor === 'string'
+                ? new Date(reminder.scheduledFor)
+                : reminder.scheduledFor,
+              createdAt: typeof reminder.createdAt === 'string'
+                ? new Date(reminder.createdAt)
+                : reminder.createdAt,
+            }));
+          }
+
+          if (state.aiSuggestions) {
+            state.aiSuggestions = state.aiSuggestions.map((suggestion: any) => ({
+              ...suggestion,
+              timestamp: typeof suggestion.timestamp === 'string'
+                ? new Date(suggestion.timestamp)
+                : suggestion.timestamp,
+            }));
+          }
+        }
+      },
     }
   )
 );
